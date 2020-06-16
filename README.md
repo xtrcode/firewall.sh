@@ -1,9 +1,9 @@
 # firewall.sh
-This is a small and easily manipulatable bash script to open & close ports and manage multiple ips for several servers.
+This is a small and easily manipulatable bash script to open & close ports, and manage multiple ips for several servers.
 
-As I'm managin several servers i wanted uniform script which can be edited by terminal and automation tools (ansible).
+As I'm managing several servers, I wanted an uniform script, which can be edited by terminal and automation tools (ansible).
 
-I came up with the solution you see in this repo. It's by far any perfect but fits my needs - and that's what matters.
+I came up with the solution, which you can see in this repo. It is far from perfect, but it fits my needs - and that's what matters.
 
 Feel free to edit, share or fork this repo!
 

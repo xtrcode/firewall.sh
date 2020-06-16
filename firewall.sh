@@ -9,29 +9,29 @@ FLOATING_IP6=""
 INTERNAL_IP4=""
 INTERNAL_NET="10.0.0.0/24"
 
-MANAGEMENT_IPS=(10.0.0.250 10.0.0.2)
-MONITORING_IPS=("${MANAGEMENT_IPS[*]}" 10.0.0.80)
+MANAGEMENT_IPS=()
+MONITORING_IPS=("${MANAGEMENT_IPS[*]}")
 
 
 # PORTs
-OPEN_TCP_PUBLIC_V4=(1)
-OPEN_UDP_PUBLIC_V4=(2)
-OPEN_TCP_PUBLIC_V6=(3)
-OPEN_UDP_PUBLIC_V6=(4)
+OPEN_TCP_PUBLIC_V4=()
+OPEN_UDP_PUBLIC_V4=()
+OPEN_TCP_PUBLIC_V6=()
+OPEN_UDP_PUBLIC_V6=()
 
-OPEN_TCP_FLOATING_V4=(5)
-OPEN_UDP_FLOATING_V4=(6)
-OPEN_TCP_FLOATING_V6=(7)
-OPEN_UDP_FLOATING_V6=(8)
+OPEN_TCP_FLOATING_V4=()
+OPEN_UDP_FLOATING_V4=()
+OPEN_TCP_FLOATING_V6=()
+OPEN_UDP_FLOATING_V6=()
 
-OPEN_TCP_INTERNAL_V4=(9)
-OPEN_UDP_INTERNAL_V4=(10)
+OPEN_TCP_INTERNAL_V4=()
+OPEN_UDP_INTERNAL_V4=()
 
-OPEN_TCP_MANAGEMENT_V4=(11)
-OPEN_UDP_MANAGEMENT_V4=(12)
+OPEN_TCP_MANAGEMENT_V4=()
+OPEN_UDP_MANAGEMENT_V4=()
 
-OPEN_TCP_MONITORING_V4=(13)
-OPEN_UDP_MONITORING_V4=(14)
+OPEN_TCP_MONITORING_V4=()
+OPEN_UDP_MONITORING_V4=()
 
 # DONT TOUCH
 ipt4() {
@@ -87,6 +87,17 @@ iptables_reset() {
     $ipt6 -A INPUT -p ipv6-icmp -j ACCEPT
 }
 
+iptables_reject_and_save() {
+    # set default policy to REJECT
+    $ipt46 -A INPUT -j REJECT
+    $ipt46 -A FORWARD -j REJECT
+
+    iptables-save > /etc/sysconfig/iptables
+    ip6tables-save > /etc/sysconfig/ip6tables
+    systemctl restart iptables
+    systemctl restart ip6tables
+}
+
 iptables_open_ports_caller() {
     declare -a ports=("${!1}")
 
@@ -128,4 +139,12 @@ iptables_open_ports() {
     done
 }
 
+pre_start
+
+iptables_reset
+
 iptables_open_ports
+
+iptables_reject_and_save
+
+post_start

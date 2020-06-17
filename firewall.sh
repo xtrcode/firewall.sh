@@ -36,15 +36,17 @@ OPEN_UDP_MONITORING_V4=()
 # DONT TOUCH
 ipt4() {
     echo /sbin/iptables "$@"
+    /sbin/iptables $@
 }
 
 ipt6() {
     echo /sbin/ip6tables "$@"
+    /sbin/ip6tables $@
 }
 
 ipt() {
-    ipt4 "$@"
-    ipt6 "$@"
+    ipt4 $@
+    ipt6 $@
 }
 
 ipt46="ipt  "

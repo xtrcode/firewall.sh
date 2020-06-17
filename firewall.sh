@@ -82,9 +82,9 @@ iptables_reset() {
     $ipt46 -A OUTPUT -m state --state RELATED,ESTABLISHED -j ACCEPT
 
     # allow icmp
-    $ipt4 -A OUTPUT -m state --state NEW -p icmp --icmp-type echo-request -j ACCEPT
-    $ipt4 -A INPUT -m state --state NEW -p icmp --icmp-type echo-request -j ACCEPT
-    $ipt6 -A INPUT -p ipv6-icmp -j ACCEPT
+    ipt4 -A OUTPUT -m state --state NEW -p icmp --icmp-type echo-request -j ACCEPT
+    ipt4 -A INPUT -m state --state NEW -p icmp --icmp-type echo-request -j ACCEPT
+    ipt6 -A INPUT -p ipv6-icmp -j ACCEPT
 }
 
 iptables_reject_and_save() {

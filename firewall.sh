@@ -7,17 +7,16 @@ FLOATING_IP4=""
 FLOATING_IP6=""
 
 INTERNAL_IP4=""
-INTERNAL_NET="10.0.0.0/24"
+INTERNAL_NET=""
 
-MANAGEMENT_IPS=()
+MANAGEMENT_IPS=(10.0.0.250 10.0.0.2)
 MONITORING_IPS=("${MANAGEMENT_IPS[*]}")
 
-
 # PORTs
-OPEN_TCP_PUBLIC_V4=()
-OPEN_UDP_PUBLIC_V4=()
-OPEN_TCP_PUBLIC_V6=()
-OPEN_UDP_PUBLIC_V6=()
+OPEN_TCP_PUBLIC_V4=(22 655)
+OPEN_UDP_PUBLIC_V4=(655)
+OPEN_TCP_PUBLIC_V6=(22 655)
+OPEN_UDP_PUBLIC_V6=(655)
 
 OPEN_TCP_FLOATING_V4=()
 OPEN_UDP_FLOATING_V4=()
@@ -32,6 +31,14 @@ OPEN_UDP_MANAGEMENT_V4=()
 
 OPEN_TCP_MONITORING_V4=()
 OPEN_UDP_MONITORING_V4=()
+
+custom_rules() {
+    # ALLOW HTTP/HTTPS
+    ipt4 -A DOCKER-USER -m state --state NEW -p tcp --dport 80 -j ACCEPT
+    ipt6 -A FORWARD -m state --state NEW -p tcp --dport 80 -j ACCEPT
+    ipt4 -A DOCKER-USER -m state --state NEW -p tcp --dport 443 -j ACCEPT
+    ipt6 -A FORWARD -m state --state NEW -p tcp --dport 443 -j ACCEPT
+}
 
 # DONT TOUCH
 ipt4() {
@@ -51,23 +58,29 @@ ipt() {
 
 ipt46="ipt  "
 
+has_docker() {
+    if systemctl list-units | grep -Fq 'docker'; then
+        return 0
+    else
+        return 1
+    fi
+}
+
 pre_start() {
-    if systemctl list-units | grep -Fq 'docker'; then    
+    if has_docker; then
         systemctl stop docker
     fi
 }
 
 post_start() {
-    if systemctl list-units | grep -Fq 'docker'; then    
+    if has_docker; then
         systemctl start docker
     fi
 }
 
-
 iptables_reset() {
     # delete everything
     $ipt46 -F
-    $ipt46 -X
     $ipt46 -Z
 
     # set default policy
@@ -90,12 +103,18 @@ iptables_reset() {
 }
 
 iptables_reject_and_save() {
+    custom_rules
+
     # set default policy to REJECT
+    if has_docker; then
+        $ipt46 -A DOCKER-USER -j REJECT
+    fi
+
     $ipt46 -A INPUT -j REJECT
     $ipt46 -A FORWARD -j REJECT
 
-    iptables-save > /etc/sysconfig/iptables
-    ip6tables-save > /etc/sysconfig/ip6tables
+    iptables-save >/etc/sysconfig/iptables
+    ip6tables-save >/etc/sysconfig/ip6tables
     systemctl restart iptables
     systemctl restart ip6tables
 }
@@ -103,9 +122,8 @@ iptables_reject_and_save() {
 iptables_open_ports_caller() {
     declare -a ports=("${!1}")
 
-    for port in ${ports[*]}
-    do
-        ($2 "-A INPUT -m state --state NEW -p $3 $4 --dport $port -j ACCEPT ");
+    for port in ${ports[*]}; do
+        ($2 "-A INPUT -m state --state NEW -p $3 $4 --dport $port -j ACCEPT")
     done
 }
 
@@ -127,15 +145,13 @@ iptables_open_ports() {
     iptables_open_ports_caller OPEN_UDP_INTERNAL_V4[@] ipt4 "udp" "-d $INTERNAL_IP4"
 
     # OPEN PORTs FOR MONITORING IPs
-    for ip in ${MONITORING_IPS[*]}
-    do
+    for ip in ${MONITORING_IPS[*]}; do
         iptables_open_ports_caller OPEN_TCP_MONITORING_V4[@] ipt4 "tcp" "-s $ip"
         iptables_open_ports_caller OPEN_UDP_MONITORING_V4[@] ipt4 "udp" "-s $ip"
     done
 
     # OPEN PORTs FOR MANAGEMENT IPs
-    for ip in ${MANAGEMENT_IPS[*]}
-    do
+    for ip in ${MANAGEMENT_IPS[*]}; do
         iptables_open_ports_caller OPEN_TCP_MANAGEMENT_V4[@] ipt4 "tcp" "-s $ip"
         iptables_open_ports_caller OPEN_UDP_MANAGEMENT_V4[@] ipt4 "udp" "-s $ip"
     done
